@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block navigation %}
+	<button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapsedForm" aria-expanded="false" aria-controls="collapsedForm">
+		Добавить магазин
+	</button>
+{% endblock %}
+{% block content %}
+	<div class="container my-1 bg-light">
+		<div class="collapse"  id="collapsedForm">
+			<form method="POST" action="{{ url_for('main.AddStore') }}">
+				{{ form.csrf_token() }}
+				<div class="form-row">
+					<div class="form-group col-md-4">
+						{{ form.name.label }}
+						{{ form.name(class_ = 'form-control') }}
+					</div>
+					<div class="form-group col-md-4">
+						{{ form.email.label }}
+						{{ form.email(class_ = 'form-control') }}
+					</div>
+					<div class="form-group col-md-4">
+						{{ form.password.label }}
+						{{ form.password(class_ = 'form-control') }}
+					</div>
+				</div>
+				<div class="form-group">
+					{{ form.submit(class_ = 'btn btn-primary mb-1') }}
+				</div>
+			</form>
+		</div>
+	</div>
+	<div class="container border bg-light my-1">
+		<h6 class="text-secondary text-right">Центральный хаб</h6>
+		<div class="row my-1 d-none d-sm-flex font-weight-bold">
+			<div class="col">
+				&nbsp;
+			</div>
+			<div class="col">
+				partners_key
+			</div>
+			<div class="col">
+				client_id
+			</div>
+			<div class="col">
+				client_secret
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm">
+				<a href="https://store{{ current_user.hub_id }}.shopsettings.com">Центральный хаб</a>
+			</div>
+			<div class="col-sm">
+				<span class="d-sm-none font-weight-bold">partners_key</span>
+				{{ current_user.partners_key }}
+			</div>
+			<div class="col-sm">
+				<span class="d-sm-none font-weight-bold">client_id</span>
+				{{ current_user.client_id }}
+			</div>
+			<div class="col-sm">
+				<span class="d-sm-none font-weight-bold">client_secret</span>
+				{{ current_user.client_secret }}
+			</div>
+		</div>
+	</div>
+	<div class="container border bg-light my-1">
+		<h6 class="text-secondary text-right">Магазины агентов</h6>
+		<div class="row my-1 d-none d-sm-flex font-weight-bold">
+			<div class="col-3">
+				&nbsp;
+			</div>
+			<div class="col-3">
+				Email
+			</div>
+			<div class="col-3">
+				Платёжный план
+			</div>
+			<div class="col">
+				Заказов
+			</div>
+			<div class="col-2">
+				&nbsp;
+			</div>
+		</div>
+		{% for store in stores_info %}
+			<div class="row my-1 border-bottom">
+				<div class="col-sm-3">
+					<a href="https://store{{ store['id'] }}.shopsettings.com">{{ store['name'] }}</a>
+				</div>
+				<div class="col-sm-3">
+					<span class="d-sm-none font-weight-bold">Email</span>
+					{{ store['email'] }}
+				</div>
+				<div class="col-sm-3">
+					<span class="d-sm-none font-weight-bold">Платёжный план</span>
+					{{ store['plan'] }}
+				</div>
+				<div class="col-sm">
+					<span class="d-sm-none font-weight-bold">Заказов</span>
+					{{ store['orders_count'] }}
+				</div>
+				<div class="col-sm-2 text-right">
+					<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['id']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
+				</div>
+			</div>
+			{% endfor %}
+	</div>
+{% endblock %}
+
+{% block scripts %}
+{%endblock %}

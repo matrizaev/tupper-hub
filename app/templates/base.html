@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+	<head>
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		{% block styles %}
+			<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+			<style>
+				.octicon{width:12px;height:12px;}
+				.thumbnail,svg{width:30px;height:30px;}
+			</style>
+		{% endblock %}
+		<title>Панель управления</title>
+		{{ moment.include_jquery() }}
+		{{ moment.include_moment(sri=False) }}
+		{{ moment.locale("ru") }}
+	</head>
+	<body>
+		<header id="header" class="header">
+			<div class = "container">
+				<div class = "row">
+					<div class = "col">
+						{% with messages = get_flashed_messages() %}
+							{% if messages %}
+									<div class="alert alert-primary" role="alert">
+									{% for message in messages %}
+										{{ message }}<br>
+									{% endfor %}
+									</div>
+							{% endif %}
+									<div class="alert alert-primary d-none" role="alert" id = "ajaxAlert">
+									</div>
+						{% endwith %}
+					</div>
+				</div>
+				<nav class="navbar navbar-light bg-light">
+					<a class="navbar-brand" href="{{ url_for('main.ShowIndex') }}">
+						<img src="http://84.201.139.143/static/logo.png" class="d-inline-block align-top thumbnail" alt="">
+						Панель управления
+					</a>
+					{% block navigation %}{% endblock %}
+			</div>
+				</nav>				
+			</div>
+		</header>
+		{% block content %}{% endblock %}
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+			<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.2.2/jquery.form.min.js" integrity="sha384-FzT3vTVGXqf7wRfy8k4BiyzvbNfeYjK+frTVqZeNDFl8woCbF0CYG6g2fMEFFo/i" crossorigin="anonymous"></script>
+			<script>
+				function ShowAjaxFlashes(data){
+					$('.alert').empty();
+					$('.alert').addClass('d-none');
+					var ajaxAlert = $('#ajaxAlert');
+					ajaxAlert.removeClass('d-none alert-primary alert-warning');
+					if (data.status == true)
+					{
+						ajaxAlert.addClass('alert-primary');
+					}
+					else
+					{
+						ajaxAlert.addClass('alert-warning');
+					}
+					data.flash.forEach(function(element) {
+						ajaxAlert.append(element + '<br>');
+					});
+				}
+			</script>
+		{% block scripts %}
+		{% endblock %}
+	</body>
+</html>
