@@ -45,6 +45,9 @@
 			<div class="col">
 				client_secret
 			</div>
+			<div class="col">
+				Проверка API
+			</div>
 		</div>
 		<div class="row">
 			<div class="col-sm">
@@ -61,6 +64,11 @@
 			<div class="col-sm">
 				<span class="d-sm-none font-weight-bold">client_secret</span>
 				{{ current_user.client_secret }}
+			</div>
+			<div class="col-sm text-right">
+				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.ProcessOrders') }}">Заказы</a><br>
+				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.ProcessProducts') }}">Товары</a><br>
+				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.CleanProducts') }}">Очистка</a>
 			</div>
 		</div>
 	</div>
@@ -101,10 +109,11 @@
 					{{ store['orders_count'] }}
 				</div>
 				<div class="col-sm-2 text-right">
+					<a role="button" class="btn btn-primary" href="{{ url_for('main.ShowStore', store_id = store['id']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
 					<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['id']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
 				</div>
 			</div>
-			{% endfor %}
+		{% endfor %}
 	</div>
 {% endblock %}
 

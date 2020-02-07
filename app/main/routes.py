@@ -2,10 +2,11 @@ from app import db
 from flask import redirect, flash, render_template, request, url_for, Response, jsonify
 from flask_login import current_user, login_required
 from app.main import bp
-import uuid
 from app.models import User, Store
 from app.ecwid import EcwidAPI
 from app.main.forms import AddStoreForm
+from app.api.routes import ProcessHubOrders, ProcessHubProducts, CleanDeletedProducts
+from datetime import datetime
 
 @bp.route('/')
 @bp.route('/index/')
@@ -40,7 +41,7 @@ def AddStore():
 @bp.route('/delete/<store_id>', methods=['POST'])
 @login_required
 def DeleteStore(store_id):
-	store = Store.query.filter(Store.id == store_id, store.user_id == current_user.id).first()
+	store = Store.query.filter(Store.id == store_id, Store.user_id == current_user.id).first()
 	if store:
 		api = EcwidAPI(client_id = current_user.client_id, client_secret = current_user.client_secret, partners_key = current_user.partners_key)
 		if api.DeleteStore(store_id):
@@ -51,5 +52,42 @@ def DeleteStore(store_id):
 			flash('Не удалось удалить магазин.')
 	else:
 		flash('Магазин не найден.')
+	return redirect(url_for('main.ShowIndex'))
+
+@bp.route('/show/<store_id>', methods=['GET'])
+@login_required
+def ShowStore(store_id):
+	store = Store.query.filter(Store.id == store_id, Store.user_id == current_user.id).first()
+	if store:
+		api = EcwidAPI(client_id = current_user.client_id, client_secret = current_user.client_secret, partners_key = current_user.partners_key)
+		orders = api.GetStoreOrders(store_id, store.token, limit = 3)
+		products = api.GetStoreProducts(store_id, store.token)
+		return render_template('store.html', orders = orders['items'])
+	else:
+		flash('Магазин не найден.')
+	return redirect(url_for('main.ShowIndex'))
+	
+@bp.route('/process_orders/')
+@login_required
+def ProcessOrders():
+	ProcessHubOrders(current_user)
+	now = datetime.now()
+	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))	
 	
+@bp.route('/process_products/')
+@login_required
+def ProcessProducts():
+	for store in current_user.stores:
+		ProcessHubProducts(current_user, store)
+	now = datetime.now()
+	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	return redirect(url_for('main.ShowIndex'))
+	
+@bp.route('/clean_products/')
+@login_required
+def CleanProducts():
+	CleanDeletedProducts(current_user)
+	now = datetime.now()
+	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	return redirect(url_for('main.ShowIndex'))

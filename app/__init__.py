@@ -41,7 +41,7 @@ def create_app(config_class=Config):
 	app.register_blueprint(main_bp)
 	
 	from app.api import bp as api_bp
-	app.register_blueprint(api_bp)
+	app.register_blueprint(api_bp, url_prefix='/api')
 
 	if not app.debug:
 		if not os.path.exists('logs'):

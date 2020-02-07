@@ -21,7 +21,7 @@ class User(UserMixin, db.Model):
 	client_secret = db.Column(db.String(128), nullable=False)
 	hub_id = db.Column(db.Integer, unique = True, nullable=False)
 	token = db.Column(db.String(128), nullable=False)
-	orders_date = db.Column(db.DateTime, default=datetime.utcnow)
+	orders_date = db.Column(db.DateTime,nullable=False, default=datetime.utcnow)
 	
 	def __repr__ (self):
 		return '<User {}>'.format(self.email)
