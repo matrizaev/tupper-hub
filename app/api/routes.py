@@ -6,6 +6,9 @@ from app.api.errors import BadRequest
 from datetime import datetime
 from app.models import User, Store
 
+_DISALLOWED_ORDERS_ITEM_FIELDS = ['productId', 'id', 'categoryId']
+_DISALLOWED_ORDERS_FIELDS = ['vendorOrderNumber', 'customerId']
+
 @bp.route('/orders/', methods=['GET'])
 @basic_auth.login_required
 def ProcessHubOrdersRequest():
@@ -18,17 +21,14 @@ def ProcessHubOrders(user):
 	orders = user.EcwidGetStoreOrders(user.hub_id, user.token, createdFrom = int(user.orders_date.timestamp()))
 	user.orders_date = datetime.now()
 	orders_processed = 0
-	print('Orders', len(orders['items']))
+	print(len(orders['items']))
 	for order in orders['items']:
 		for key in _DISALLOWED_ORDERS_FIELDS:
 			order.pop(key, None)
-		print('\tProducts', len(order['items']))
-		print(order['items'])
 		for product in order['items']:
 			for key in _DISALLOWED_ORDERS_ITEM_FIELDS:
 				product.pop(key, None)
 		for store in user.stores:
-			print('\t\tStore', store.id)
 			products = list()
 			totalPrice = 0
 			for product in order['items']:
@@ -41,9 +41,6 @@ def ProcessHubOrders(user):
 			if len(products) == 0:
 				return {}
 			items = order['items']
-			print(products)
-			print()
-			print()
 			order['items'] = products
 			order['subtotal'] = totalPrice
 			order['total'] = totalPrice		

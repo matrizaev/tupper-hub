@@ -23,11 +23,7 @@ _ALLOWED_PRODUCTS_FIELDS = ['sku', 'thumbnailUrl', 'unlimited', 'inStock', 'name
 _DISALLOWED_PRODUCTS_FIELDS = ['id', 'categories', 'defaultCategoryId', 'relatedProducts', 'combinations', 'url', 'productClassId',
 							   'defaultCombinationId']
 
-_DISALLOWED_ORDERS_FIELDS = ['vendorOrderNumber', 'customerId']
-
 _DISALLOWED_CATEGORIES_FIELDS = ['id', 'url', 'productCount']
-
-_DISALLOWED_ORDERS_ITEM_FIELDS = ['productId', 'id', 'categoryId']
 
 @login.user_loader
 def load_user(id):
