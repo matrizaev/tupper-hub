@@ -77,7 +77,7 @@ def ShowStore(store_id):
 def ProcessOrders():
 	orders_processed = ProcessHubOrders(current_user)
 	now = datetime.now()
-	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	flash('Создано {} заказов.'.format(orders_processed))
 	return redirect(url_for('main.ShowIndex'))	
 
@@ -87,7 +87,7 @@ def ProcessProducts():
 	for store in current_user.stores:
 		ProcessHubProducts(current_user, store)
 	now = datetime.now()
-	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))	
 
 @bp.route('/update_products/')
@@ -96,7 +96,7 @@ def UpdateProducts():
 	for store in current_user.stores:
 		UpdateHubProducts(current_user, store)
 	now = datetime.now()
-	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))
 
 @bp.route('/clean_products/')
@@ -104,5 +104,5 @@ def UpdateProducts():
 def CleanProducts():
 	CleanDeletedProducts(current_user)
 	now = datetime.now()
-	flash('Процедура успешно проведена: ' + now.strftime("%m/%d/%Y, %H:%M:%S"))
+	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))

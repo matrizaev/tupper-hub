@@ -17,11 +17,10 @@ def ProcessHubOrdersRequest():
 	return jsonify({'result':'success'})
 
 def ProcessHubOrders(user):
-	print(int(user.orders_date.timestamp()))
 	orders = user.EcwidGetStoreOrders(user.hub_id, user.token, createdFrom = int(user.orders_date.timestamp()))
 	user.orders_date = datetime.now()
+	db.session.commit()
 	orders_processed = 0
-	print(len(orders['items']))
 	for order in orders['items']:
 		for key in _DISALLOWED_ORDERS_FIELDS:
 			order.pop(key, None)
@@ -39,7 +38,7 @@ def ProcessHubOrders(user):
 					products.append(product_new)
 					totalPrice += product_new['price'] * product_new['quantity']
 			if len(products) == 0:
-				return {}
+				continue
 			items = order['items']
 			order['items'] = products
 			order['subtotal'] = totalPrice
@@ -50,7 +49,6 @@ def ProcessHubOrders(user):
 				orders_processed += 1
 			order['items'] = items
 			db.session.add(store)
-	db.session.add(user)
 	db.session.commit()
 	return orders_processed
 
