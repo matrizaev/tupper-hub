@@ -5,7 +5,6 @@ from flask_login import login_user, logout_user, current_user
 from werkzeug.urls import url_parse
 from app.auth.forms import LoginForm, RegistrationForm
 from app.models import User, Store
-from app.ecwid import EcwidAPI
 
 @bp.route('/login/', methods = ['GET', 'POST'])
 def PerformLogin():
@@ -30,14 +29,13 @@ def PerformRegistration():
 		return redirect(url_for('main.ShowIndex'))
 	form = RegistrationForm()
 	if form.validate_on_submit():
-		api = EcwidAPI(client_id = form.client_id.data, client_secret = form.client_secret.data, partners_key = form.partners_key.data)
+		user = User(email = form.email.data, hub_id = form.hub_id.data, client_id = form.client_id.data, client_secret = form.client_secret.data, partners_key = form.partners_key.data)
 		try:
-			token = api.GetStoreToken(form.hub_id.data)['access_token']
-			store_info = api.GetStoreInfo(form.hub_id.data)
+			token = user.EcwidGetStoreToken(form.hub_id.data)['access_token']
+			store_info = user.EcwidTestPartnersKey()
 		except:
 			flash('Введённые API ключи не действительны.')
 			return render_template ('auth/register.html', form = form)
-		user = User(email = form.email.data, hub_id = form.hub_id.data, client_id = form.client_id.data, client_secret = form.client_secret.data, partners_key = form.partners_key.data, token = token)
 		user.SetPassword(form.password.data)		
 		db.session.add(user)
 		db.session.commit()

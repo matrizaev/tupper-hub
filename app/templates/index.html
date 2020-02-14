@@ -11,17 +11,21 @@
 			<form method="POST" action="{{ url_for('main.AddStore') }}">
 				{{ form.csrf_token() }}
 				<div class="form-row">
-					<div class="form-group col-md-4">
+					<div class="form-group col-md-3">
 						{{ form.name.label }}
 						{{ form.name(class_ = 'form-control') }}
 					</div>
-					<div class="form-group col-md-4">
+					<div class="form-group col-md-3">
 						{{ form.email.label }}
 						{{ form.email(class_ = 'form-control') }}
 					</div>
-					<div class="form-group col-md-4">
+					<div class="form-group col-md-3">
 						{{ form.password.label }}
 						{{ form.password(class_ = 'form-control') }}
+					</div>
+					<div class="form-group col-md-3">
+						{{ form.plan.label }}
+						{{ form.plan(class_ = 'form-control') }}
 					</div>
 				</div>
 				<div class="form-group">
@@ -53,27 +57,35 @@
 			<div class="col-sm">
 				<a href="https://store{{ current_user.hub_id }}.shopsettings.com">Центральный хаб</a>
 			</div>
-			<div class="col-sm">
+			<div class="col-sm overflow-hidden">
 				<span class="d-sm-none font-weight-bold">partners_key</span>
 				{{ current_user.partners_key }}
 			</div>
-			<div class="col-sm">
+			<div class="col-sm overflow-hidden">
 				<span class="d-sm-none font-weight-bold">client_id</span>
 				{{ current_user.client_id }}
 			</div>
-			<div class="col-sm">
+			<div class="col-sm overflow-hidden">
 				<span class="d-sm-none font-weight-bold">client_secret</span>
 				{{ current_user.client_secret }}
 			</div>
 			<div class="col-sm text-right">
 				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.ProcessOrders') }}">Заказы</a><br>
 				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.ProcessProducts') }}">Товары</a><br>
-				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.CleanProducts') }}">Очистка</a>
+				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.CleanProducts') }}">Очистка</a><br>
+				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.UpdateProducts') }}">Обновление</a>
 			</div>
 		</div>
 	</div>
 	<div class="container border bg-light my-1">
-		<h6 class="text-secondary text-right">Магазины агентов</h6>
+		<div class="row my-1">
+			<div class="col-sm">
+				<input class="form-control" id="storeFilter" type="text" placeholder="Фильтр..">
+			</div>
+			<div class="col-sm">
+				<h6 class="text-secondary text-right">Магазины агентов</h6>
+			</div> 
+		</div>
 		<div class="row my-1 d-none d-sm-flex font-weight-bold">
 			<div class="col-3">
 				&nbsp;
@@ -82,7 +94,7 @@
 				Email
 			</div>
 			<div class="col-3">
-				Платёжный план
+				Владелец
 			</div>
 			<div class="col">
 				Заказов
@@ -91,31 +103,44 @@
 				&nbsp;
 			</div>
 		</div>
-		{% for store in stores_info %}
-			<div class="row my-1 border-bottom">
-				<div class="col-sm-3">
-					<a href="https://store{{ store['id'] }}.shopsettings.com">{{ store['name'] }}</a>
+		<div id="storesListInner">
+			{% for store in stores_info %}
+				<div class="row my-1 border-bottom">
+					<div class="col-sm-3">
+						<a href="{{ store['generalInfo']['storeUrl'] }}">{{ store['settings']['storeName'] }}</a>
+					</div>
+					<div class="col-sm-3 overflow-hidden">
+						<span class="d-sm-none font-weight-bold">Email</span>
+						{{ store['account']['accountEmail'] }}
+					</div>
+					<div class="col-sm-3 overflow-hidden">
+						<span class="d-sm-none font-weight-bold">Владелец</span>
+						{{ store['account']['accountName'] }}
+					</div>
+					<div class="col-sm">
+						<span class="d-sm-none font-weight-bold">Заказов</span>
+						{{ store['orders_count'] }}
+					</div>
+					<div class="col-sm-2 text-right">
+						<a role="button" class="btn btn-primary" href="{{ url_for('main.ShowStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
+						<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['generalInfo']['storeId']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
+					</div>
 				</div>
-				<div class="col-sm-3">
-					<span class="d-sm-none font-weight-bold">Email</span>
-					{{ store['email'] }}
-				</div>
-				<div class="col-sm-3">
-					<span class="d-sm-none font-weight-bold">Платёжный план</span>
-					{{ store['plan'] }}
-				</div>
-				<div class="col-sm">
-					<span class="d-sm-none font-weight-bold">Заказов</span>
-					{{ store['orders_count'] }}
-				</div>
-				<div class="col-sm-2 text-right">
-					<a role="button" class="btn btn-primary" href="{{ url_for('main.ShowStore', store_id = store['id']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
-					<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['id']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
-				</div>
-			</div>
-		{% endfor %}
+			{% endfor %}
+		</div>
 	</div>
 {% endblock %}
 
 {% block scripts %}
+
+<script>
+	$(document).ready(function(){
+	  $("#storeFilter").on("keyup", function() {
+		var value = $(this).val().toLowerCase();
+		$("#storesListInner div.row").filter(function() {
+		  $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+		});
+	  });
+	});
+</script>
 {%endblock %}

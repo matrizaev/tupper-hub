@@ -14,18 +14,48 @@ def ProcessHubOrdersRequest():
 	return jsonify({'result':'success'})
 
 def ProcessHubOrders(user):
-	api = user.GetEcwidAPI()
-	orders = api.GetStoreOrders(user.hub_id, user.token, createdFrom = int(user.orders_date.timestamp()))
+	print(int(user.orders_date.timestamp()))
+	orders = user.EcwidGetStoreOrders(user.hub_id, user.token, createdFrom = int(user.orders_date.timestamp()))
 	user.orders_date = datetime.now()
 	orders_processed = 0
+	print('Orders', len(orders['items']))
 	for order in orders['items']:
+		for key in _DISALLOWED_ORDERS_FIELDS:
+			order.pop(key, None)
+		print('\tProducts', len(order['items']))
+		print(order['items'])
+		for product in order['items']:
+			for key in _DISALLOWED_ORDERS_ITEM_FIELDS:
+				product.pop(key, None)
 		for store in user.stores:
-			result = api.SetStoreOrder(store.id, store.token, order)
+			print('\t\tStore', store.id)
+			products = list()
+			totalPrice = 0
+			for product in order['items']:
+				sku = product['sku'].split('-')
+				if len(sku) > 1 and sku[0] == str(store.id):
+					product_new = product.copy()
+					product_new['sku'] = sku[1]
+					products.append(product_new)
+					totalPrice += product_new['price'] * product_new['quantity']
+			if len(products) == 0:
+				return {}
+			items = order['items']
+			print(products)
+			print()
+			print()
+			order['items'] = products
+			order['subtotal'] = totalPrice
+			order['total'] = totalPrice		
+			result = user.EcwidSetStoreOrder(store.id, store.token, order)
 			if 'id' in result:
 				store.orders_count += 1
 				orders_processed += 1
+			order['items'] = items
+			db.session.add(store)
+	db.session.add(user)
 	db.session.commit()
-	return True
+	return orders_processed
 
 @bp.route('/products/', methods=['GET'])
 @basic_auth.login_required
@@ -36,9 +66,8 @@ def ProcessHubProductsRequest():
 	return jsonify({'result':'success'})
 		
 def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
-	api = user.GetEcwidAPI()
-	categories = api.GetStoreCategories(store.id, store.token, parent = parent)
-	products = api.GetStoreProducts(store.id, store.token, category = parent)
+	categories = user.EcwidGetStoreCategories(store.id, store.token, parent = parent)
+	products = user.EcwidGetStoreProducts(store.id, store.token, category = parent)
 	#ProcessHubProducts
 	for product in products['items']:
 		product['sku'] = '{}-{}'.format(store.id, product['sku'])
@@ -46,11 +75,11 @@ def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
 			product['categoryIds'] = [hub_parent]
 		else:
 			product['categoryIds'] = []
-		product_id = api.SetStoreProduct(user.hub_id, user.token, product)['id']
+		product_id = user.EcwidSetStoreProduct(user.hub_id, user.token, product)['id']
 		if 'imageUrl' in product:
-			api.SetStoreProductImage(user.hub_id, user.token, product_id, product['imageUrl'])
+			user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, product['imageUrl'])
 	#ProcessStoreCategories
-	hub_categories = api.GetStoreCategories(user.hub_id, user.token, parent = hub_parent)
+	hub_categories = user.EcwidGetStoreCategories(user.hub_id, user.token, parent = hub_parent)
 	for category in categories['items']:
 		hub_category_id = None
 		for hub_category in hub_categories['items']:
@@ -58,9 +87,24 @@ def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
 				hub_category_id = hub_category['id']
 				break
 		if not hub_category_id:
-			hub_category = api.SetStoreCategory(user.hub_id, user.token, {'parentId' : hub_parent, 'name' : category['name']})
+			hub_category = user.EcwidSetStoreCategory(user.hub_id, user.token, {'parentId' : hub_parent, 'name' : category['name']})
 			hub_category_id = hub_category['id']
 		ProcessHubProducts(user, store, category['id'], hub_category_id)
+	return True
+	
+@bp.route('/updates/', methods=['GET'])
+@basic_auth.login_required
+def UpdateHubProductsRequest():
+	user = User.query.get_or_404(g.user_id)
+	for store in user.stores:
+		UpdateHubProducts(user, store)
+	return jsonify({'result':'success'})
+		
+def UpdateHubProducts(user, store):
+	products = user.EcwidGetStoreProducts(store.id, store.token)
+	for product in products['items']:
+		product['sku'] = '{}-{}'.format(store.id, product['sku'])
+		user.EcwidUpdateStoreProduct(user.hub_id, user.token, product)
 	return True
 
 @bp.route('/clean/', methods=['GET'])
@@ -71,8 +115,7 @@ def CleanDeletedProductsRequest():
 	return jsonify({'result':'success'})
 
 def CleanDeletedProducts(user):
-	api = user.GetEcwidAPI()
-	products = api.GetStoreProducts(user.hub_id, user.token)
+	products = user.EcwidGetStoreProducts(user.hub_id, user.token)
 	for product in products['items']:
 		sku = product['sku'].split('-')
 		if len(sku) > 1:
@@ -83,7 +126,7 @@ def CleanDeletedProducts(user):
 			sku = '-'.join(sku[1:])
 			store = Store.query.filter(Store.user_id == user.id, Store.id == store_id).first()
 			if store:
-				store_products = api.GetStoreProducts(store.id, store.token, sku = sku)
+				store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = sku)
 				if store_products['total'] == 0:
-					api.DeleteStoreProduct(user.hub_id, user.token, product['id'])
+					user.EcwidDeleteStoreProduct(user.hub_id, user.token, product['id'])
 	return True
