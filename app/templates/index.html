@@ -9,27 +9,27 @@
 	<div class="container my-1 bg-light">
 		<div class="collapse"  id="collapsedForm">
 			<form method="POST" action="{{ url_for('main.AddStore') }}">
-				{{ form.csrf_token() }}
+				{{ add_form.csrf_token() }}
 				<div class="form-row">
 					<div class="form-group col-md-3">
-						{{ form.name.label }}
-						{{ form.name(class_ = 'form-control') }}
+						{{ add_form.name.label }}
+						{{ add_form.name(class_ = 'form-control') }}
 					</div>
 					<div class="form-group col-md-3">
-						{{ form.email.label }}
-						{{ form.email(class_ = 'form-control') }}
+						{{ add_form.email.label }}
+						{{ add_form.email(class_ = 'form-control') }}
 					</div>
 					<div class="form-group col-md-3">
-						{{ form.password.label }}
-						{{ form.password(class_ = 'form-control') }}
+						{{ add_form.password.label }}
+						{{ add_form.password(class_ = 'form-control') }}
 					</div>
 					<div class="form-group col-md-3">
-						{{ form.plan.label }}
-						{{ form.plan(class_ = 'form-control') }}
+						{{ add_form.plan.label }}
+						{{ add_form.plan(class_ = 'form-control') }}
 					</div>
 				</div>
 				<div class="form-group">
-					{{ form.submit(class_ = 'btn btn-primary mb-1') }}
+					{{ add_form.submit(class_ = 'btn btn-primary mb-1') }}
 				</div>
 			</form>
 		</div>
@@ -74,6 +74,23 @@
 				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.ProcessProducts') }}">Товары</a><br>
 				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.CleanProducts') }}">Очистка</a><br>
 				<a role="button" class="btn btn-primary text-white my-1" href="{{ url_for('main.UpdateProducts') }}">Обновление</a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm">
+				<a href="http://84.201.139.143/static/data/{{ current_user.id }}.csv">CSV парсинг</a>
+			</div>
+			<div class="col-sm text-right">
+				<form method="POST"  enctype="multipart/form-data" action="{{ url_for('main.UploadProducts') }}" id="UploadProductsForm">
+					{{ upload_form.csrf_token }}
+					Товары постащика: 
+					<label for="products">
+						<span class="btn btn-primary mb-1">
+							<img class="octicon" src="http://84.201.139.143/static/octicons/cloud-upload.svg" alt="upload">
+						</span>
+					</label>
+					<input id="products" type="file" name="products" class="d-none" accept=".csv">
+				</form>
 			</div>
 		</div>
 	</div>
@@ -122,6 +139,7 @@
 						{{ store['orders_count'] }}
 					</div>
 					<div class="col-sm-2 text-right">
+						<a role="button" class="btn btn-primary" href="{{ url_for('main.FillUpStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/repo-push.svg" alt="Наполнить"></a>
 						<a role="button" class="btn btn-primary" href="{{ url_for('main.ShowStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
 						<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['generalInfo']['storeId']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
 					</div>
@@ -135,12 +153,15 @@
 
 <script>
 	$(document).ready(function(){
-	  $("#storeFilter").on("keyup", function() {
-		var value = $(this).val().toLowerCase();
-		$("#storesListInner div.row").filter(function() {
-		  $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+		$("#storeFilter").on("keyup", function() {
+			var value = $(this).val().toLowerCase();
+			$("#storesListInner div.row").filter(function() {
+				$(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+			});
 		});
-	  });
+		$('#products').on('change',function(){
+			$('#UploadProductsForm').submit();
+		})
 	});
 </script>
 {%endblock %}

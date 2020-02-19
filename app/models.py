@@ -34,6 +34,7 @@ class User(UserMixin, db.Model):
 	email	= db.Column(db.String(120), index = True, unique = True, nullable=False)
 	password = db.Column(db.String(128), nullable=False)
 	stores = db.relationship('Store', backref = 'user')
+	products = db.relationship('Product', backref = 'user')
 	partners_key = db.Column(db.String(128), nullable=False)
 	client_id = db.Column(db.String(128), nullable=False)
 	client_secret = db.Column(db.String(128), nullable=False)
@@ -41,7 +42,7 @@ class User(UserMixin, db.Model):
 	token = db.Column(db.String(128), nullable=False)
 	orders_date = db.Column(db.DateTime,nullable=False, default=datetime.utcnow)
 	
-	def __repr__ (self):
+	def __repr__(self):
 		return '<User {}>'.format(self.email)
 	
 	def SetPassword(self, password):
@@ -96,18 +97,18 @@ class User(UserMixin, db.Model):
 
 	def _EcwidGetErrorMessage(self, error):
 		if error == 400:
-			return 'Неверные параметры запроса.'
+			message = 'Неверные параметры запроса.'
 		elif error == 402 or error == 403:
-			return 'Недостаточно прав на выполнение запроса.'
+			message = 'Недостаточно прав на выполнение запроса.'
 		elif error == 404:
-			return 'Пользователь, магазин или товар не найден.'
+			message = 'Пользователь, магазин или товар не найден.'
 		elif error == 409:
-			return 'Значения полей товара не верные.'
-		elif error == 415:
-			return 'Неверные тип запроса.'
+			message = 'Значения полей товара не верные.'
+		elif error == 415 or error == 422:
+			message = 'Неверные тип запроса.'
 		elif error != 200:
-			return 'Неизвестная ошибка API.'
-		return ''
+			message = 'Неизвестная ошибка API.'
+		return '{}: {}'.format(error, message)
 
 	def EcwidGetStoreEndpoint(self, store_id, token, endpoint, **kwargs):
 		'''Gets store's endpoint using REST API, returns JSON'''
@@ -165,7 +166,7 @@ class User(UserMixin, db.Model):
 			if key in template:
 				product[key] = template[key]
 		store_product = self.EcwidGetStoreProducts(store_id, token, sku = product['sku'])
-		if (store_product['count'] > 0):
+		if(store_product['count'] > 0):
 			product_id = store_product['items'][0]['id']
 			response = put(_REST_API_URL.format(store_id = store_id,endpoint = 'products/{}'.format(product_id)), json = product, params=params)
 			result = response.json()
@@ -192,7 +193,7 @@ class User(UserMixin, db.Model):
 			if key in template:
 				product[key] = template[key]
 		store_product = self.EcwidGetStoreProducts(store_id, token, sku = product['sku'])
-		if (store_product['count'] > 0):
+		if(store_product['count'] > 0):
 			product_id = store_product['items'][0]['id']
 			response = put(_REST_API_URL.format(store_id = store_id,endpoint = 'products/{}'.format(product_id)), json = product, params=params)
 			result = response.json()
@@ -204,10 +205,12 @@ class User(UserMixin, db.Model):
 			raise Exception(self._EcwidGetErrorMessage(response.status_code))
 		return result
 		
-	def EcwidSetStoreProductImage(self, store_id, token, product_id, img_url):
+	def EcwidSetStoreProductImage(self, store_id, token, product_id, img_url=None, data=None):
 		'''Deletes store's product using REST API, returns JSON'''
-		params = {'token':token, 'externalUrl':img_url}
-		response = post(_REST_API_URL.format(store_id = store_id,endpoint = 'products/{}/image'.format(product_id)), params = params)
+		params = {'token':token}
+		if img_url:
+			params['externalUrl'] = img_url
+		response = post(_REST_API_URL.format(store_id = store_id,endpoint = 'products/{}/image'.format(product_id)), params = params, data=data)
 		if response.status_code != 200:
 			raise Exception(self._EcwidGetErrorMessage(response.status_code))
 		return response.json()
@@ -227,4 +230,25 @@ class Store(db.Model):
 	token = db.Column(db.String(128), nullable=False)
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	orders_count = db.Column(db.Integer, nullable=False, default = 0, server_default='0')
+	
+class Product(db.Model):
+	id = db.Column(db.Integer, primary_key = True)
+	sku = db.Column(db.String(128), unique = True)
+	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+	category = db.Column(db.Text, nullable=False)
+	description = db.Column(db.Text, nullable=False)
+	imageUrl = db.Column(db.String(128), nullable=False)
+	price = db.Column(db.Float, nullable=False)
+	name = db.Column(db.String(128), nullable=False)
+
+	def ToDict(self):
+		data = {
+			'sku': self.sku,
+			'name': self.name,
+			'price': self.price,
+			'description': self.description,
+			'imageUrl': self.imageUrl,
+			'category': self.category
+		}
+		return data
 	

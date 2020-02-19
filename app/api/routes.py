@@ -5,6 +5,7 @@ from app import db
 from app.api.errors import BadRequest
 from datetime import datetime
 from app.models import User, Store
+from requests import get
 
 _DISALLOWED_ORDERS_ITEM_FIELDS = ['productId', 'id', 'categoryId']
 _DISALLOWED_ORDERS_FIELDS = ['vendorOrderNumber', 'customerId']
@@ -125,3 +126,37 @@ def CleanDeletedProducts(user):
 				if store_products['total'] == 0:
 					user.EcwidDeleteStoreProduct(user.hub_id, user.token, product['id'])
 	return True
+	
+@bp.route('/fillup/<int:store_id>', methods=['GET'])
+@basic_auth.login_required
+def FillUpProductsRequest(store_id):
+	user = User.query.get_or_404(g.user_id)
+	store = Store.query.filter(Store.user_id == user.id, Store.id == store_id).first()
+	if not store:
+		return jsonify({'result':'not found'})
+	FillUpProducts(user, store)
+	return jsonify({'result':'success'})
+	
+def FillUpProducts(user, store):
+	for product in user.products:
+		path = product.category.split('/')
+		parent = 0
+		for cat in path:
+			categories = user.EcwidGetStoreCategories(store.id, store.token, parent = parent)
+			for item in categories['items']:
+				print(cat, item['name'])
+				if cat == item['name']:
+					parent = item['id']
+					found = True
+					break
+			else:
+				item = user.EcwidSetStoreCategory(store.id, store.token, {'parentId' : parent, 'name' : cat})
+				parent = item['id']
+		d = product.ToDict()
+		d['categoryIds'] = [parent]
+		d['showOnFrontpage'] = 1
+		product_id = user.EcwidSetStoreProduct(store.id, store.token, d)['id']
+		response = get(d['imageUrl'])
+		user.EcwidSetStoreProductImage(store.id, store.token, product_id, data = response.content)
+		
+	

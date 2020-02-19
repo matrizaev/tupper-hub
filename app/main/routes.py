@@ -2,16 +2,18 @@ from app import db
 from flask import redirect, flash, render_template, request, url_for, Response, jsonify
 from flask_login import current_user, login_required
 from app.main import bp
-from app.models import User, Store
-from app.main.forms import AddStoreForm
-from app.api.routes import ProcessHubOrders, ProcessHubProducts, CleanDeletedProducts, UpdateHubProducts
+from app.models import User, Store, Product
+from app.main.forms import AddStoreForm, UploadProductsForm
+from app.api.routes import ProcessHubOrders, ProcessHubProducts, CleanDeletedProducts, UpdateHubProducts, FillUpProducts
 from datetime import datetime
+import pandas as pd
 
 @bp.route('/')
 @bp.route('/index/')
 @login_required
 def ShowIndex():
-	form = AddStoreForm()
+	add_form = AddStoreForm()
+	upload_form = UploadProductsForm()
 	stores_info = list()
 	for store in current_user.stores:
 		try:
@@ -21,7 +23,7 @@ def ShowIndex():
 			continue
 		info['orders_count'] = store.orders_count
 		stores_info.append(info)
-	return render_template('index.html', stores_info = stores_info, form = form)
+	return render_template('index.html', stores_info = stores_info, add_form = add_form, upload_form = upload_form)
 	
 @bp.route('/add', methods=['POST'])
 @login_required
@@ -43,7 +45,7 @@ def AddStore():
 			flash(error)
 	return redirect(url_for('main.ShowIndex'))
 
-@bp.route('/delete/<store_id>', methods=['GET'])
+@bp.route('/delete/<int:store_id>', methods=['GET'])
 @login_required
 def DeleteStore(store_id):
 	store = Store.query.filter(Store.id == store_id, Store.user_id == current_user.id).first()
@@ -60,7 +62,7 @@ def DeleteStore(store_id):
 		flash('Магазин не найден.')
 	return redirect(url_for('main.ShowIndex'))
 
-@bp.route('/show/<store_id>', methods=['GET'])
+@bp.route('/show/<int:store_id>', methods=['GET'])
 @login_required
 def ShowStore(store_id):
 	store = Store.query.filter(Store.id == store_id, Store.user_id == current_user.id).first()
@@ -105,4 +107,40 @@ def CleanProducts():
 	CleanDeletedProducts(current_user)
 	now = datetime.now()
 	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
+	return redirect(url_for('main.ShowIndex'))
+	
+@bp.route('/upload_products/', methods=['POST'])
+@login_required
+def UploadProducts():
+	form = UploadProductsForm()
+	if form.validate_on_submit():
+#		try:
+		df = pd.read_csv(form.products.data, sep = ';')
+		df = df.groupby('sku', as_index = False).agg({'category': lambda s: max(s, key=len), 'name': 'first', 'price':'first', 'description':'first', 'imageUrl':'first'})
+		df['user_id'] = current_user.id
+		df.fillna(value={'description' : '', 'price' : 0}, inplace = True)
+		df['price'] = df['price'].astype('float64')
+		Product.query.filter(Product.user_id == current_user.id).delete()
+		db.session.commit()
+		df.to_sql(name = 'product', con = db.engine, if_exists = 'append', index = False)
+		flash('Файл успешно загружен.')
+#		except:
+#			flash('Не удалось обработать файл.')
+	else:
+		flash(form.products.error)
+	return redirect(url_for('main.ShowIndex'))
+	
+@bp.route('/fillup_store/<int:store_id>')
+@login_required
+def FillUpStore(store_id):
+	store = Store.query.filter(Store.user_id == current_user.id, Store.id == store_id).first()
+	if not store:
+		flash('Магазин не найден.')
+	else:
+		try:
+			FillUpProducts(current_user, store)
+			now = datetime.now()
+			flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
+		except Exception as e:
+			flash('Ошибка API: {}'.format(e))
 	return redirect(url_for('main.ShowIndex'))
