@@ -58,9 +58,9 @@ def ProcessHubOrders(user):
 def ProcessHubProductsRequest():
 	user = User.query.get_or_404(g.user_id)
 	for store in user.stores:
-		ProcessHubProducts(user, store)
+		ProcessHubProducts2(user, store)
 	return jsonify({'result':'success'})
-		
+
 def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
 	categories = user.EcwidGetStoreCategories(store.id, store.token, parent = parent)
 	products = user.EcwidGetStoreProducts(store.id, store.token, category = parent)
@@ -87,7 +87,38 @@ def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
 			hub_category_id = hub_category['id']
 		ProcessHubProducts(user, store, category['id'], hub_category_id)
 	return True
+
+
+def CreateStoreCategoriesPath(user, store_id, store_token, path):
+	path = path.split('/')
+	parent = 0
+	for cat in path:
+		categories = user.EcwidGetStoreCategories(store_id, store_token, parent = parent)
+		for item in categories['items']:
+			if cat == item['name']:
+				parent = item['id']
+				found = True
+				break
+		else:
+			item = user.EcwidSetStoreCategory(store_id, store_token, {'parentId' : parent, 'name' : cat})
+			parent = item['id']
+	return parent
 	
+def ProcessHubProducts2(user, store):
+	for product in user.products:
+		store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = product.sku)
+		if(store_products['count'] == 0):
+			continue
+		parent = CreateStoreCategoriesPath(user, user.hub_id, user.token, product.category)
+		d = product.ToDict()
+		d['categoryIds'] = [parent]
+		d['price'] = store_products['items'][0]['price']
+		d['showOnFrontpage'] = 1
+		d['sku'] = '{}-{}'.format(store.id, product.sku)
+		product_id = user.EcwidSetStoreProduct(user.hub_id, user.token, d)['id']
+		response = get(d['imageUrl'])
+		user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, data = response.content)
+
 @bp.route('/updates/', methods=['GET'])
 @basic_auth.login_required
 def UpdateHubProductsRequest():
@@ -139,19 +170,7 @@ def FillUpProductsRequest(store_id):
 	
 def FillUpProducts(user, store):
 	for product in user.products:
-		path = product.category.split('/')
-		parent = 0
-		for cat in path:
-			categories = user.EcwidGetStoreCategories(store.id, store.token, parent = parent)
-			for item in categories['items']:
-				print(cat, item['name'])
-				if cat == item['name']:
-					parent = item['id']
-					found = True
-					break
-			else:
-				item = user.EcwidSetStoreCategory(store.id, store.token, {'parentId' : parent, 'name' : cat})
-				parent = item['id']
+		parent = CreateStoreCategoriesPath(user, store.id, store.token, product.category)
 		d = product.ToDict()
 		d['categoryIds'] = [parent]
 		d['showOnFrontpage'] = 1

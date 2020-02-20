@@ -4,7 +4,7 @@ from flask_login import current_user, login_required
 from app.main import bp
 from app.models import User, Store, Product
 from app.main.forms import AddStoreForm, UploadProductsForm
-from app.api.routes import ProcessHubOrders, ProcessHubProducts, CleanDeletedProducts, UpdateHubProducts, FillUpProducts
+from app.api.routes import ProcessHubOrders, ProcessHubProducts2, CleanDeletedProducts, UpdateHubProducts, FillUpProducts
 from datetime import datetime
 import pandas as pd
 
@@ -87,7 +87,7 @@ def ProcessOrders():
 @login_required
 def ProcessProducts():
 	for store in current_user.stores:
-		ProcessHubProducts(current_user, store)
+		ProcessHubProducts2(current_user, store)
 	now = datetime.now()
 	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))	
