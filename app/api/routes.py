@@ -57,8 +57,7 @@ def ProcessHubOrders(user):
 @basic_auth.login_required
 def ProcessHubProductsRequest():
 	user = User.query.get_or_404(g.user_id)
-	for store in user.stores:
-		ProcessHubProducts2(user, store)
+	ProcessHubProducts2(user)
 	return jsonify({'result':'success'})
 
 def ProcessHubProducts(user, store, parent = 0, hub_parent = 0):
@@ -104,20 +103,21 @@ def CreateStoreCategoriesPath(user, store_id, store_token, path):
 			parent = item['id']
 	return parent
 	
-def ProcessHubProducts2(user, store):
+def ProcessHubProducts2(user):
 	for product in user.products:
-		store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = product.sku)
-		if(store_products['count'] == 0):
-			continue
 		parent = CreateStoreCategoriesPath(user, user.hub_id, user.token, product.category)
 		d = product.ToDict()
 		d['categoryIds'] = [parent]
-		d['price'] = store_products['items'][0]['price']
-		d['showOnFrontpage'] = 1
-		d['sku'] = '{}-{}'.format(store.id, product.sku)
-		product_id = user.EcwidSetStoreProduct(user.hub_id, user.token, d)['id']
 		response = get(d['imageUrl'])
-		user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, data = response.content)
+		for store in user.stores:
+			store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = product.sku)
+			if(store_products['count'] == 0):
+				continue
+			d['price'] = store_products['items'][0]['price']
+			d['showOnFrontpage'] = 3
+			d['sku'] = '{}-{}'.format(store.id, product.sku)
+			product_id = user.EcwidSetStoreProduct(user.hub_id, user.token, d)['id']
+			user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, data = response.content)
 
 @bp.route('/updates/', methods=['GET'])
 @basic_auth.login_required
@@ -173,7 +173,7 @@ def FillUpProducts(user, store):
 		parent = CreateStoreCategoriesPath(user, store.id, store.token, product.category)
 		d = product.ToDict()
 		d['categoryIds'] = [parent]
-		d['showOnFrontpage'] = 1
+		d['showOnFrontpage'] = 3
 		product_id = user.EcwidSetStoreProduct(store.id, store.token, d)['id']
 		response = get(d['imageUrl'])
 		user.EcwidSetStoreProductImage(store.id, store.token, product_id, data = response.content)

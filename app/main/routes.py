@@ -86,8 +86,7 @@ def ProcessOrders():
 @bp.route('/process_products/')
 @login_required
 def ProcessProducts():
-	for store in current_user.stores:
-		ProcessHubProducts2(current_user, store)
+	ProcessHubProducts2(current_user)
 	now = datetime.now()
 	flash('Процедура успешно проведена: ' + now.strftime("%d-%m-%Y, %H:%M:%S"))
 	return redirect(url_for('main.ShowIndex'))	
