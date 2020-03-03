@@ -14,6 +14,12 @@ _REST_API_URL = 'https://app.ecwid.com/api/v3/{store_id}/{endpoint}'
 _PARTNERS_API_URL = 'https://my.ecwid.com/resellerapi/v1/'
 _OAUTH_URL = 'https://my.ecwid.com/api/oauth/token/'
 
+_DEFAULT_STORE_PROFILE = {'languages':{'enabledLanguages': ['ru'], 'defaultLanguage': 'ru'},
+						  'company':{'city':'Москва', 'countryCode':'RU'},
+						  'formatsAndUnits':{'currency':'RUB', 'currencyPrefix':'', 'currencySuffix':'₽',
+						  'weightUnit':'KILOGRAM', 'dateFormat':'dd-MM-yyyy', 'timezone':'Europe/Moscow',
+						  'timeFormat': 'HH:mm:ss', 'dimensionsUnit':'CM'}}
+
 _ALLOWED_PRODUCTS_FIELDS = ['sku', 'thumbnailUrl', 'unlimited', 'inStock', 'name', 'price', 'isShippingRequired', 'weight',
 							'enabled', 'options', 'imageUrl', 'smallThumbnailUrl', 'hdThumbnailUrl', 'originalImageUrl', 'originalImage',
 							'description', 'nameTranslated', 'quantity', 'wholesalePrices', 'compareToPrice', 'tax', 'productClassId',
@@ -55,9 +61,9 @@ class User(UserMixin, db.Model):
 		digest = md5(self.email.lower().encode('utf-8')).hexdigest()
 		return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(digest, size)
 	
-	def EcwidCreateStore(self, name, email, password, plan):
+	def EcwidCreateStore(self, name, email, password, plan, **kwargs):
 		'''Create store using Partners API, returns store_id'''
-		payload = {'name':name, 'email':email, 'password':password, 'plan':plan, 'key':self.partners_key}
+		payload = {'name':name, 'email':email, 'password':password, 'plan':plan, 'key':self.partners_key, **kwargs}
 		params = {'register':'y'}
 		response = post(urljoin(_PARTNERS_API_URL, 'register'), data = payload, params = params)
 		if response.status_code == 409:
@@ -66,10 +72,21 @@ class User(UserMixin, db.Model):
 			raise Exception('Некорретный электронный адрес.')
 		elif response.status_code == 403:
 			raise Exception('Некорретный ключ partners_key.')
+		elif response.status_code == 405:
+			raise Exception('Некорректный HTTP метод.')
 		elif response.status_code != 200:
 			raise Exception('Неизвестная ошибка API.')
 		xml = ET.fromstring(response.text)
 		return int(xml.text)
+		
+	def EcwidUpdateStoreProfile(self, store_id, token, template = None):
+		params = {'token':token}
+		if not template:
+			template = _DEFAULT_STORE_PROFILE
+		response = put(_REST_API_URL.format(store_id=store_id, endpoint='profile'), json=template, params=params)
+		if response.status_code != 200:
+			raise Exception(self._EcwidGetErrorMessage(response.status_code))
+		return response.json()
 	
 	def EcwidTestPartnersKey(self):
 		params = {'store.id':self.hub_id, 'key':self.partners_key}
@@ -117,26 +134,23 @@ class User(UserMixin, db.Model):
 		if response.status_code != 200:
 			raise Exception(self._EcwidGetErrorMessage(response.status_code))
 		result = response.json()
-		received = result['count']
-		while received < result['total']:
-			params['offset'] = received
-			response = get(_REST_API_URL.format(store_id = store_id,endpoint = endpoint), params = params)
-			if response.status_code != 200:
-				raise Exception(self._EcwidGetErrorMessage(response.status_code))
-			next = response.json()
-			received += result['count']
-			result['items'] += next['items']
-		result['total'] = received
-		result['count'] = received
+		if 'count' in result and 'total' in result:
+			received = result['count']
+			while received < result['total']:
+				params['offset'] = received
+				response = get(_REST_API_URL.format(store_id = store_id,endpoint = endpoint), params = params)
+				if response.status_code != 200:
+					raise Exception(self._EcwidGetErrorMessage(response.status_code))
+				next = response.json()
+				received += result['count']
+				result['items'] += next['items']
+			result['total'] = received
+			result['count'] = received
 		return result
 		
-	def EcwidGetStoreInfo(self, store_id, token):
-		'''Gets store's endpoint using REST API, returns JSON'''
-		params = {'token':token}
-		response = get(_REST_API_URL.format(store_id = store_id,endpoint = 'profile'), params = params)
-		if response.status_code != 200:
-			raise Exception(self._EcwidGetErrorMessage(response.status_code))
-		return response.json()
+	def EcwidGetStoreProfile(self, store_id, token):
+		'''Gets store's profile using REST API, returns JSON'''
+		return self.EcwidGetStoreEndpoint(store_id, token, 'profile')
 		
 	def EcwidGetStoreProducts(self, store_id, token, **kwargs):
 		'''Gets store's products using REST API, returns JSON'''
@@ -176,11 +190,19 @@ class User(UserMixin, db.Model):
 		else:
 			result = {}
 		return result
-				
+
 	def EcwidDeleteStoreProduct(self, store_id, token, product_id):
 		'''Deletes store's product using REST API, returns JSON'''
 		params = {'token':token}
 		response = delete(_REST_API_URL.format(store_id = store_id,endpoint = 'products/{}'.format(product_id)), params = params)
+		if response.status_code != 200:
+			raise Exception(self._EcwidGetErrorMessage(response.status_code))
+		return response.json()	
+		
+	def EcwidDeleteStoreCategory(self, store_id, token, cat_id):
+		'''Deletes store's category using REST API, returns JSON'''
+		params = {'token':token}
+		response = delete(_REST_API_URL.format(store_id = store_id,endpoint = 'categories/{}'.format(cat_id)), params = params)
 		if response.status_code != 200:
 			raise Exception(self._EcwidGetErrorMessage(response.status_code))
 		return response.json()

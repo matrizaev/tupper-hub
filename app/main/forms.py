@@ -8,7 +8,8 @@ class AddStoreForm(FlaskForm):
 	name = StringField('ФИО', validators = [DataRequired(message='ФИО - обязательное поле.')])
 	email = EmailField('Электронная почта', validators = [DataRequired(), Email()])
 	password = PasswordField('Пароль', validators = [DataRequired()])
-	plan = StringField('План', default = 'J_PUSHKIND_FREEDEMO', validators = [DataRequired(message='План - обязательное поле.')]) 
+	plan = StringField('План', default = 'J_PUSHKIND_FREEDEMO', validators = [DataRequired(message='План - обязательное поле.')])
+	city = StringField('Город', default = 'Москва', validators = [DataRequired(message='Город - обязательное поле.')])
 	submit = SubmitField('Сохранить')
 	
 class UploadProductsForm(FlaskForm):

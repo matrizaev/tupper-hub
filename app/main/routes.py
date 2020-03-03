@@ -2,11 +2,12 @@ from app import db
 from flask import redirect, flash, render_template, request, url_for, Response, jsonify
 from flask_login import current_user, login_required
 from app.main import bp
-from app.models import User, Store, Product
+from app.models import User, Store, Product, _DEFAULT_STORE_PROFILE
 from app.main.forms import AddStoreForm, UploadProductsForm
 from app.api.routes import ProcessHubOrders, ProcessHubProducts2, CleanDeletedProducts, UpdateHubProducts, FillUpProducts
 from datetime import datetime
 import pandas as pd
+
 
 @bp.route('/')
 @bp.route('/index/')
@@ -17,7 +18,7 @@ def ShowIndex():
 	stores_info = list()
 	for store in current_user.stores:
 		try:
-			info = current_user.EcwidGetStoreInfo(store.id, store.token)
+			info = current_user.EcwidGetStoreProfile(store.id, store.token)
 		except Exception as e:
 			flash('Ошибка с магазином {}: {}'.format(store.id, e))
 			continue
@@ -31,7 +32,8 @@ def AddStore():
 	form = AddStoreForm(request.form)
 	if form.validate_on_submit():
 		try:
-			store_id = current_user.EcwidCreateStore(name = form.name.data, email = form.email.data, password = form.password.data, plan = form.plan.data)
+			store_id = current_user.EcwidCreateStore(name = form.name.data, email = form.email.data, password = form.password.data, plan = form.plan.data,
+													 defaultlanguage='ru')
 			token = current_user.EcwidGetStoreToken(store_id)['access_token']
 		except Exception as e:
 			flash('Ошибка API: {}'.format(e))
@@ -40,8 +42,14 @@ def AddStore():
 		db.session.add(store)
 		db.session.commit()
 		flash('Магазин успешно добавлен.')
+		try:
+			template = _DEFAULT_STORE_PROFILE
+			template['city'] = form.city.data
+			current_user.EcwidUpdateStoreProfile(store_id, token, template)
+		except Exception as e:
+			flash('Ошибка UpdateProfile: {}'.format(e))
 	else:
-		for error in form.count.errors + form.discount.errors:
+		for error in form.name.errors + form.email.errors + form.password.errors + form.plan.errors + form.city.errors:
 			flash(error)
 	return redirect(url_for('main.ShowIndex'))
 
@@ -113,18 +121,18 @@ def CleanProducts():
 def UploadProducts():
 	form = UploadProductsForm()
 	if form.validate_on_submit():
-#		try:
-		df = pd.read_csv(form.products.data, sep = ';')
-		df = df.groupby('sku', as_index = False).agg({'category': lambda s: max(s, key=len), 'name': 'first', 'price':'first', 'description':'first', 'imageUrl':'first'})
-		df['user_id'] = current_user.id
-		df.fillna(value={'description' : '', 'price' : 0}, inplace = True)
-		df['price'] = df['price'].astype('float64')
-		Product.query.filter(Product.user_id == current_user.id).delete()
-		db.session.commit()
-		df.to_sql(name = 'product', con = db.engine, if_exists = 'append', index = False)
-		flash('Файл успешно загружен.')
-#		except:
-#			flash('Не удалось обработать файл.')
+		try:
+			df = pd.read_csv(form.products.data, sep = ';')
+			df = df.groupby('sku', as_index = False).agg({'category': lambda s: max(s, key=len), 'name': 'first', 'price':'first', 'description':'first', 'imageUrl':'first'})
+			df['user_id'] = current_user.id
+			df.fillna(value={'description' : '', 'price' : 0}, inplace = True)
+			df['price'] = df['price'].astype('float64')
+			Product.query.filter(Product.user_id == current_user.id).delete()
+			db.session.commit()
+			df.to_sql(name = 'product', con = db.engine, if_exists = 'append', index = False)
+			flash('Файл успешно загружен.')
+		except:
+			flash('Не удалось обработать файл.')
 	else:
 		flash(form.products.error)
 	return redirect(url_for('main.ShowIndex'))

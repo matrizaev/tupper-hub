@@ -11,21 +11,25 @@
 			<form method="POST" action="{{ url_for('main.AddStore') }}">
 				{{ add_form.csrf_token() }}
 				<div class="form-row">
-					<div class="form-group col-md-3">
+					<div class="form-group col-md-2">
 						{{ add_form.name.label }}
 						{{ add_form.name(class_ = 'form-control') }}
 					</div>
-					<div class="form-group col-md-3">
+					<div class="form-group col-md-2">
 						{{ add_form.email.label }}
 						{{ add_form.email(class_ = 'form-control') }}
 					</div>
-					<div class="form-group col-md-3">
+					<div class="form-group col-md-2">
 						{{ add_form.password.label }}
 						{{ add_form.password(class_ = 'form-control') }}
 					</div>
-					<div class="form-group col-md-3">
+					<div class="form-group col-md">
 						{{ add_form.plan.label }}
 						{{ add_form.plan(class_ = 'form-control') }}
+					</div>
+					<div class="form-group col-md-2">
+						{{ add_form.city.label }}
+						{{ add_form.city(class_ = 'form-control') }}
 					</div>
 				</div>
 				<div class="form-group">
@@ -104,44 +108,51 @@
 			</div> 
 		</div>
 		<div class="row my-1 d-none d-sm-flex font-weight-bold">
-			<div class="col-3">
+			<div class="col-2">
 				&nbsp;
 			</div>
 			<div class="col-3">
 				Email
 			</div>
-			<div class="col-3">
+			<div class="col-2">
 				Владелец
 			</div>
-			<div class="col">
-				Заказов
+			<div class="col-2">
+				Город
 			</div>
 			<div class="col-2">
+				Заказов
+			</div>
+			<div class="col-1">
 				&nbsp;
 			</div>
 		</div>
 		<div id="storesListInner">
 			{% for store in stores_info %}
 				<div class="row my-1 border-bottom">
-					<div class="col-sm-3">
+					<div class="col-sm-2">
 						<a href="{{ store['generalInfo']['storeUrl'] }}">{{ store['settings']['storeName'] }}</a>
 					</div>
 					<div class="col-sm-3 overflow-hidden">
 						<span class="d-sm-none font-weight-bold">Email</span>
 						{{ store['account']['accountEmail'] }}
 					</div>
-					<div class="col-sm-3 overflow-hidden">
+					<div class="col-sm-2 overflow-hidden">
 						<span class="d-sm-none font-weight-bold">Владелец</span>
 						{{ store['account']['accountName'] }}
 					</div>
-					<div class="col-sm">
+					<div class="col-sm-2 overflow-hidden">
+						<span class="d-sm-none font-weight-bold">Город</span>
+						{{ store['company'].get('city', '') }}
+					</div>
+					<div class="col-sm-2">
 						<span class="d-sm-none font-weight-bold">Заказов</span>
 						{{ store['orders_count'] }}
 					</div>
-					<div class="col-sm-2 text-right">
-						<a role="button" class="btn btn-primary" href="{{ url_for('main.FillUpStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/repo-push.svg" alt="Наполнить"></a>
-						<a role="button" class="btn btn-primary" href="{{ url_for('main.ShowStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
-						<a role="button" class="btn btn-danger" href="{{ url_for('main.DeleteStore', store_id = store['generalInfo']['storeId']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
+					<div class="col-sm-1 text-right">
+						<a role="button" class="btn btn-primary my-1" href="{{ url_for('main.FillUpStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/repo-push.svg" alt="Наполнить"></a>
+						<a role="button" class="btn btn-primary my-1" href="{{ url_for('main.ShowStore', store_id = store['generalInfo']['storeId']) }}"><img class="octicon" src="http://admin.pushkind.com/static/octicons/eye.svg" alt="Просмотр"></a>
+						<a role="button" class="btn btn-danger my-1" href="{{ url_for('main.DeleteStore', store_id = store['generalInfo']['storeId']) }}" onclick="return confirm('Удалить?')"><img class="octicon" src="http://admin.pushkind.com/static/octicons/dash.svg" alt="Удалить"></a>
 					</div>
 				</div>
 			{% endfor %}

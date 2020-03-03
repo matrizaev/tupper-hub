@@ -92,6 +92,8 @@ def CreateStoreCategoriesPath(user, store_id, store_token, path):
 	path = path.split('/')
 	parent = 0
 	for cat in path:
+		if cat == '' or cat == None:
+			continue
 		categories = user.EcwidGetStoreCategories(store_id, store_token, parent = parent)
 		for item in categories['items']:
 			if cat == item['name']:
@@ -104,20 +106,26 @@ def CreateStoreCategoriesPath(user, store_id, store_token, path):
 	return parent
 	
 def ProcessHubProducts2(user):
+	cities = {}
 	for product in user.products:
-		parent = CreateStoreCategoriesPath(user, user.hub_id, user.token, product.category)
-		d = product.ToDict()
-		d['categoryIds'] = [parent]
-		response = get(d['imageUrl'])
+		response = get(product.imageUrl)
 		for store in user.stores:
+			if not store.id in cities:
+				profile = user.EcwidGetStoreProfile(store.id, store.token)
+				cities[store.id] = profile['company'].get('city', 'Москва')
 			store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = product.sku)
 			if(store_products['count'] == 0):
 				continue
+			path = cities[store.id] + '/' + product.category
+			parent = CreateStoreCategoriesPath(user, user.hub_id, user.token, path)
+			d = product.ToDict()
+			d['categoryIds'] = [parent]
 			d['price'] = store_products['items'][0]['price']
 			d['showOnFrontpage'] = 3
 			d['sku'] = '{}-{}'.format(store.id, product.sku)
 			product_id = user.EcwidSetStoreProduct(user.hub_id, user.token, d)['id']
-			user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, data = response.content)
+			user.EcwidSetStoreProductImage(user.hub_id, user.token, product_id, data = response.content)			
+
 
 @bp.route('/updates/', methods=['GET'])
 @basic_auth.login_required
@@ -156,8 +164,18 @@ def CleanDeletedProducts(user):
 				store_products = user.EcwidGetStoreProducts(store.id, store.token, sku = sku)
 				if store_products['total'] == 0:
 					user.EcwidDeleteStoreProduct(user.hub_id, user.token, product['id'])
+	CleanEmptyCategories(user)
 	return True
-	
+
+def CleanEmptyCategories(user):
+	categories = user.EcwidGetStoreCategories(user.hub_id, user.token)
+	for cat in categories['items']:
+		if cat['productCount'] != 0:
+			continue
+		sub = user.EcwidGetStoreCategories(user.hub_id, user.token, parent = cat['id'])
+		if sub['total'] == 0:
+			user.EcwidDeleteStoreCategory(user.hub_id, user.token, cat['id'])
+
 @bp.route('/fillup/<int:store_id>', methods=['GET'])
 @basic_auth.login_required
 def FillUpProductsRequest(store_id):
