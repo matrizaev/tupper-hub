@@ -1,0 +1,4 @@
+*.o
+__pycache__/
+c/ecwid-api
+*.py[cod]
