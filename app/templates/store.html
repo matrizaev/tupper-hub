@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block navigation %}
+{% endblock %}
+{% block content %}
+	<div class="container border bg-light my-1">
+		<h6 class="text-secondary text-right">Заказы</h6>
+		<div class="row my-1 d-none d-sm-flex font-weight-bold">
+			<div class="col">
+				Доставка
+			</div>
+			<div class="col">
+				Телефон
+			</div>
+			<div class="col">
+				Email
+			</div>
+			<div class="col">
+				Комментарий
+			</div>
+		</div>
+		{% for order in orders %}
+			{% include '_order.html' %}
+		{% endfor %}
+	</div>
+{% endblock %}
+
+{% block scripts %}
+{%endblock %}
